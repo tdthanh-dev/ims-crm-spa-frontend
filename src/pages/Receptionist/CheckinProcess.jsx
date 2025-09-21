@@ -16,9 +16,23 @@ const CheckinProcess = () => {
   const loadTodayAppointments = async () => {
     try {
       setLoading(true);
-      const response = await appointmentsApi.getTodayAppointments();
+      const response = await appointmentsApi.getAll();
 
-      setTodayAppointments(response || []);
+      let appointments = [];
+      if (response?.content && Array.isArray(response.content)) {
+        appointments = response.content;
+      } else if (Array.isArray(response)) {
+        appointments = response;
+      }
+
+      // Filter appointments for today
+      const today = new Date().toDateString();
+      appointments = appointments.filter(apt => {
+        if (!apt.appointmentDateTime) return false;
+        return new Date(apt.appointmentDateTime).toDateString() === today;
+      });
+
+      setTodayAppointments(appointments);
     } catch (error) {
       console.error('Error loading appointments:', error);
     } finally {
@@ -28,7 +42,7 @@ const CheckinProcess = () => {
 
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     try {
-      await appointmentsApi.updateAppointmentStatus(appointmentId, { status: newStatus });
+      await appointmentsApi.updateStatus(appointmentId, { status: newStatus });
       await loadTodayAppointments(); // Refresh data
 
       if (selectedAppointment && selectedAppointment.id === appointmentId) {
@@ -248,7 +262,7 @@ const CheckinProcess = () => {
 
               <div className="detail-row">
                 <label>Thời gian:</label>
-                <span>{selectedAppointment.formattedTime || formatDateTimeVN(selectedAppointment.startAt)}</span>
+                <span>{selectedAppointment.formattedTime || formatDateTimeVN(selectedAppointment.appointmentDateTime)}</span>
               </div>
 
               <div className="detail-row">

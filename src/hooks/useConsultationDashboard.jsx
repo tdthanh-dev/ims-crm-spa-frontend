@@ -39,6 +39,14 @@ export const useConsultationDashboard = () => {
   // Modal state
   const [modalState, setModalState] = useState({ isOpen: false, selectedRequest: null });
 
+  // Appointment modal state
+  const [appointmentModalState, setAppointmentModalState] = useState({
+    isOpen: false,
+    context: null,
+    onAppointmentCreated: null
+  });
+
+
   // Fetch statistics from API
   const fetchStatistics = useCallback(async () => {
     try {
@@ -110,14 +118,33 @@ export const useConsultationDashboard = () => {
     setModalState({ isOpen: false, selectedRequest: null });
   }, []);
 
+  const handleCloseAppointmentModal = useCallback(() => {
+    setAppointmentModalState({ isOpen: false, context: null, onAppointmentCreated: null });
+  }, []);
+
   const handleCreateCustomer = useCallback(async () => {
     await fetchData();
     await fetchStatistics();
   }, [fetchData, fetchStatistics]);
 
   const handleCreateAppointment = useCallback((request) => {
-    window.location.href = '/receptionist/appointments?leadId=' + request.leadId;
-  }, []);
+    // Open appointment modal with context containing customer info
+    const context = {
+      leadId: request.leadId,
+      customerName: request.fullName,
+      customerPhone: request.phone,
+      customerId: request.customerId
+    };
+    setAppointmentModalState({
+      isOpen: true,
+      context,
+      onAppointmentCreated: () => {
+        fetchData();
+        fetchStatistics();
+        handleCloseAppointmentModal();
+      }
+    });
+  }, [fetchData, fetchStatistics, handleCloseAppointmentModal]);
 
   const handleStartConsultation = useCallback(async (request) => {
     try {
@@ -203,6 +230,7 @@ export const useConsultationDashboard = () => {
     pagination,
     statusFilter,
     modalState,
+    appointmentModalState,
 
     // Handlers
     handleSort,
@@ -210,6 +238,7 @@ export const useConsultationDashboard = () => {
     handlePageSizeChange,
     handleViewRequest,
     handleCloseModal,
+    handleCloseAppointmentModal,
     handleCreateCustomer,
     handleCreateAppointment,
     handleStartConsultation,

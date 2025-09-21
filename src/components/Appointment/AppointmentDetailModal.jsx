@@ -4,7 +4,7 @@ import { appointmentsApi } from '@/services/appointmentsApi';
 import { formatDateTimeVN } from '@/utils/dateUtils';
 
 const STATUS_OPTIONS = [
-  { value: 'SCHEDULED', label: 'Đã đặt' },
+  { value: 'SCHEDULED', label: 'Đã lên lịch' },
   { value: 'CONFIRMED', label: 'Đã xác nhận' },
   { value: 'NO_SHOW',   label: 'Không đến' },
   { value: 'DONE',      label: 'Hoàn thành' },
@@ -23,9 +23,20 @@ const AppointmentDetailModal = ({
 }) => {
   const [form, setForm] = useState({
     status: 'SCHEDULED',
-    reason: '',
     notes: ''
   });
+
+  // Status mapping from English to Vietnamese (fallback)
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      'SCHEDULED': 'Đã lên lịch',
+      'CONFIRMED': 'Đã xác nhận',
+      'NO_SHOW': 'Không đến',
+      'DONE': 'Hoàn thành',
+      'CANCELLED': 'Đã hủy'
+    };
+    return statusMap[status] || status;
+  };
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -67,7 +78,7 @@ const AppointmentDetailModal = ({
 
     try {
       setSaving(true);
-      await appointmentsApi.updateAppointmentStatus(apptId, {
+      await appointmentsApi.updateStatus(apptId, {
         status: form.status,
         reason: form.reason || undefined,
         notes: form.notes || undefined
@@ -105,12 +116,18 @@ const AppointmentDetailModal = ({
 
         {/* Thông tin hiển thị */}
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <InfoRow label="Khách hàng" value={appointment.customerName || appointment.customer?.fullName || 'N/A'} />
-          <InfoRow label="Dịch vụ" value={appointment.serviceName || appointment.service?.name || 'N/A'} />
-          <InfoRow label="Kỹ thuật viên" value={appointment.technicianName || appointment.technician?.fullName || '—'} />
-          <InfoRow label="Trạng thái hiện tại" value={appointment.status || 'N/A'} />
-          <InfoRow label="Bắt đầu" value={formatDateTimeVN(appointment.startAt)} />
-          <InfoRow label="Kết thúc" value={formatDateTimeVN(appointment.endAt)} />
+          <InfoRow label="Khách hàng" value={appointment.customerName || 'N/A'} />
+          <InfoRow label="Số điện thoại" value={appointment.customerPhone || 'N/A'} />
+          <InfoRow label="Trạng thái" value={appointment.displayStatus || getStatusLabel(appointment.status) || 'N/A'} />
+          <InfoRow label="Thời gian hẹn" value={formatDateTimeVN(appointment.appointmentDateTime)} />
+          {appointment.reminderSent && (
+            <InfoRow label="Đã gửi reminder" value="✓" />
+          )}
+          {appointment.note && (
+            <div className="md:col-span-2">
+              <InfoRow label="Ghi chú" value={appointment.note} />
+            </div>
+          )}
         </div>
 
         {err && (
@@ -140,17 +157,6 @@ const AppointmentDetailModal = ({
             </p>
           </div>
 
-          <div>
-            <label className={field}>Lý do (tuỳ chọn)</label>
-            <input
-              type="text"
-              name="reason"
-              value={form.reason}
-              onChange={handleChange}
-              className={input}
-              placeholder="Ví dụ: Khách yêu cầu đổi lịch / huỷ..."
-            />
-          </div>
 
           <div className="md:col-span-2">
             <label className={field}>Ghi chú (tuỳ chọn)</label>

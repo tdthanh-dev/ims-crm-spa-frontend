@@ -1,12 +1,41 @@
 // ========= ConsultationDashboard.jsx (Tailwind) =========
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDateTimeVN } from '@/utils/dateUtils';
 // removed: import { truncateText } from '@/utils/formatters';
 import { Pagination, SortableHeader } from '@/components/common/CommonComponents';
 import { useConsultationDashboard } from '@/hooks/useConsultationDashboard.jsx';
 import RequestDetailModalV2 from '@/components/RequestDetailModal/RequestDetailModalV2';
+import CreateAppointmentModal from '@/components/Appointment/CreateAppointmentModal';
+import { servicesService, customersService } from '@/services';
 
 const ConsultationDashboard = () => {
+  const [services, setServices] = useState([]);
+  const [customers, setCustomers] = useState([]);
+
+  // Fetch services and customers
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await servicesService.getActive();
+        setServices(Array.isArray(response?.content) ? response.content : []);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      }
+    };
+
+    const fetchCustomers = async () => {
+      try {
+        const response = await customersService.getAll({ size: 100 });
+        setCustomers(Array.isArray(response?.content) ? response.content : []);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+      }
+    };
+
+    fetchServices();
+    fetchCustomers();
+  }, []);
+
   const {
     data,
     statistics,
@@ -16,11 +45,13 @@ const ConsultationDashboard = () => {
     pagination,
     statusFilter,
     modalState,
+    appointmentModalState,
     handleSort,
     handlePageChange,
     handlePageSizeChange,
     handleViewRequest,
     handleCloseModal,
+    handleCloseAppointmentModal,
     handleCreateCustomer,
     handleCreateAppointment,
     handleStartConsultation,
@@ -295,13 +326,22 @@ const ConsultationDashboard = () => {
           )}
         </div>
 
-        {/* Modal */}
+        {/* Modals */}
         <RequestDetailModalV2
           isOpen={modalState.isOpen}
           onClose={handleCloseModal}
           request={modalState.selectedRequest}
           onCreateCustomer={handleCreateCustomer}
           onCreateAppointment={handleCreateAppointment}
+        />
+
+        <CreateAppointmentModal
+          isOpen={appointmentModalState.isOpen}
+          onClose={handleCloseAppointmentModal}
+          onAppointmentCreated={appointmentModalState.onAppointmentCreated}
+          services={services}
+          customers={customers}
+          context={appointmentModalState.context}
         />
       </div>
     </div>

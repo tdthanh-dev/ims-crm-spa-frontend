@@ -6,76 +6,76 @@ const CreateAppointmentModal = ({
   isOpen,
   onClose,
   onAppointmentCreated,
-  services = [],
-  customers = [],
-  context // { leadId }
+  context // { leadId, customerName, customerPhone, customerId }
 }) => {
   const [form, setForm] = useState({
     leadId: null,
     customerId: null,
-    serviceId: '',
-    startAt: '',   // "YYYY-MM-DDTHH:mm"
-    endAt: '',
+    customerName: '',
+    customerPhone: '',
+    appointmentDateTime: '',  // "YYYY-MM-DDTHH:mm"
     status: 'SCHEDULED',
-    notes: '',
-    technicianId: '',    // optional
-    receptionistId: ''   // tuỳ BE, nếu map JWT thì có thể bỏ
+    notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
 
   useMemo(() => {
-    if (context?.leadId) {
-      setForm((f) => ({ ...f, leadId: context.leadId, customerId: null }));
+    if (context?.customerId) {
+      setForm((f) => ({
+        ...f,
+        leadId: context.leadId || null,
+        customerId: context.customerId,
+        customerName: context.customerName || '',
+        customerPhone: context.customerPhone || ''
+      }));
+    } else if (context?.leadId) {
+      setForm((f) => ({
+        ...f,
+        leadId: context.leadId,
+        customerId: context.customerId || null,
+        customerName: context.customerName || '',
+        customerPhone: context.customerPhone || ''
+      }));
     }
   }, [context]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-  };
-  const handleSelectCustomer = (e) => {
-    const val = e.target.value ? Number(e.target.value) : null;
-    setForm(prev => ({ ...prev, customerId: val, leadId: null }));
-  };
-
-  const normalizeLocal = (s) => {
-    if (!s) return s;
-    // input "YYYY-MM-DDTHH:mm" -> thêm :00, và chắc chắn KHÔNG có 'Z'
-    return s.length === 16 ? `${s}:00` : s.replace('Z', '');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr('');
 
-    // XOR lead/customer
-    if (!form.leadId && !form.customerId) return setErr('Vui lòng chọn 1 trong 2: Lead hoặc Khách hàng.');
-    if (form.leadId && form.customerId) return setErr('Chỉ chọn một trong hai: Lead hoặc Khách hàng.');
+    // Validation logic matching backend AppointmentRequest.isValid()
+    // Either leadId, customerId, or both customerName and customerPhone must be provided
+    const isValid = form.leadId != null || form.customerId != null ||
+                    (form.customerName && form.customerPhone);
 
-    if (!form.serviceId || !form.startAt || !form.endAt) {
-      return setErr('Vui lòng nhập đủ Dịch vụ, thời gian Bắt đầu & Kết thúc.');
+    if (!isValid) {
+      return setErr('Cần ít nhất một trong các thông tin: Lead ID, Customer ID, hoặc cả Tên và Số điện thoại khách hàng.');
     }
 
-    const startLocal = normalizeLocal(form.startAt);
-    const endLocal = normalizeLocal(form.endAt);
-
-    // FE validate end > start
-    if (new Date(startLocal) >= new Date(endLocal)) {
-      return setErr('Thời gian kết thúc phải sau thời gian bắt đầu.');
+    // Required fields
+    if (!form.appointmentDateTime) {
+      return setErr('Vui lòng nhập thời gian hẹn.');
     }
 
     const body = {
       ...(form.leadId ? { leadId: Number(form.leadId) } : {}),
       ...(form.customerId ? { customerId: Number(form.customerId) } : {}),
-      serviceId: Number(form.serviceId),
-      startAt: startLocal, // <<<<<< gửi local-naive
-      endAt: endLocal,     // <<<<<< gửi local-naive
+      customerName: form.customerName || undefined,
+      customerPhone: form.customerPhone || undefined,
+      appointmentDateTime: form.appointmentDateTime,
       status: form.status,
-      notes: form.notes || undefined,
-      technicianId: form.technicianId ? Number(form.technicianId) : null, // optional
-      receptionistId: form.receptionistId ? Number(form.receptionistId) : undefined
+      notes: form.notes || undefined
     };
+
+    // Log request body for debugging
+    console.log('Creating appointment with body:', body);
 
     try {
       setSubmitting(true);
@@ -106,53 +106,52 @@ const CreateAppointmentModal = ({
         {err && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{err}</div>}
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* One-of: Lead or Customer */}
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Chọn khách hàng (hoặc nhập Lead ID)</label>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <select
-                name="customerId"
-                value={form.customerId ?? ''}
-                onChange={handleSelectCustomer}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={!!form.leadId}
-              >
-                <option value="">-- Chọn khách hàng --</option>
-                {customers.map((c) => (
-                  <option key={c.customerId ?? c.id} value={c.customerId ?? c.id}>
-                    {c.fullName} {c.phone ? `(${c.phone})` : ''}
-                  </option>
-                ))}
-              </select>
+          {/* Customer Information from Context */}
+          {(context?.customerId || context?.customerName) && (
+            <div className="md:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Thông tin khách hàng {context?.customerId ? '(tự động)' : '(từ yêu cầu)'}
+              </label>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-xs text-gray-600">Tên:</span>
+                    <p className="font-medium text-gray-900">{context.customerName}</p>
+                  </div>
+                  {context.customerPhone && (
+                    <div>
+                      <span className="text-xs text-gray-600">Số điện thoại:</span>
+                      <p className="font-medium text-gray-900">{context.customerPhone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* Customer Information */}
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Thông tin khách hàng</label>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <input
-                type="number"
-                name="leadId"
-                placeholder="Lead ID (nếu tạo từ lead)"
-                value={form.leadId ?? ''}
-                onChange={(e) => setForm(prev => ({ ...prev, leadId: e.target.value ? Number(e.target.value) : null, customerId: null }))}
+                type="text"
+                name="customerName"
+                placeholder="Tên khách hàng"
+                value={form.customerName}
+                onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={!!form.customerId}
+                required
+              />
+              <input
+                type="text"
+                name="customerPhone"
+                placeholder="Số điện thoại"
+                value={form.customerPhone}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                required
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">Chỉ chọn một trong hai: Khách hàng hoặc Lead.</p>
-          </div>
-
-          {/* Service */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Dịch vụ</label>
-            <select
-              name="serviceId"
-              value={form.serviceId}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-              required
-            >
-              <option value="">-- Chọn dịch vụ --</option>
-              {services.map((s) => (
-                <option key={s.serviceId ?? s.id} value={s.serviceId ?? s.id}>{s.name}</option>
-              ))}
-            </select>
           </div>
 
           {/* Status */}
@@ -164,63 +163,27 @@ const CreateAppointmentModal = ({
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
-              <option value="SCHEDULED">SCHEDULED</option>
-              <option value="CONFIRMED">CONFIRMED</option>
-              <option value="NO_SHOW">NO_SHOW</option>
-              <option value="DONE">DONE</option>
-              <option value="CANCELLED">CANCELLED</option>
+              <option value="SCHEDULED">Đã lên lịch</option>
+              <option value="CONFIRMED">Đã xác nhận</option>
+              <option value="NO_SHOW">Không đến</option>
+              <option value="DONE">Hoàn thành</option>
+              <option value="CANCELLED">Đã hủy</option>
             </select>
           </div>
 
-          {/* Start/End */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Bắt đầu</label>
+          {/* Appointment Date & Time */}
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700">Thời gian hẹn</label>
             <input
               type="datetime-local"
-              name="startAt"
-              value={form.startAt}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Kết thúc</label>
-            <input
-              type="datetime-local"
-              name="endAt"
-              value={form.endAt}
+              name="appointmentDateTime"
+              value={form.appointmentDateTime}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
               required
             />
           </div>
 
-          {/* Technician (optional) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Technician ID (tuỳ chọn)</label>
-            <input
-              type="number"
-              name="technicianId"
-              value={form.technicianId}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-              placeholder="Ví dụ: 4"
-            />
-          </div>
-
-          {/* Receptionist (nếu BE chưa map JWT thì cần) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Receptionist ID</label>
-            <input
-              type="number"
-              name="receptionistId"
-              value={form.receptionistId}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-              placeholder="Ví dụ: 3"
-            />
-          </div>
 
           {/* Notes */}
           <div className="md:col-span-2">

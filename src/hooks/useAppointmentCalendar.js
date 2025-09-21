@@ -29,13 +29,19 @@ export const useAppointmentCalendar = () => {
       // Calculate date range based on view mode
       const { startDate, endDate } = getDateRange(currentDate, viewMode);
 
-      // Use appointmentsApi with proper BE integration
-      const appointmentsData = await appointmentsApi.getAppointmentsByDateRange(
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
-      );
+      // Use appointmentsApi to get all appointments, then filter by date range
+      const appointmentsData = await appointmentsApi.getAll();
+      const content = appointmentsData.content || [];
 
-      setAppointments(appointmentsData.content || []);
+      // Filter appointments by date range
+      const filteredAppointments = content.filter(appointment => {
+        if (!appointment.appointmentDateTime) return false;
+
+        const appointmentDate = new Date(appointment.appointmentDateTime);
+        return appointmentDate >= startDate && appointmentDate < endDate;
+      });
+
+      setAppointments(filteredAppointments);
 
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -95,9 +101,7 @@ export const useAppointmentCalendar = () => {
     const styles = {
       SCHEDULED: { background: '#dbeafe', color: '#1e40af' },
       CONFIRMED: { background: '#dcfce7', color: '#166534' },
-      CHECKED_IN: { background: '#fef3c7', color: '#92400e' },
-      IN_PROGRESS: { background: '#e0e7ff', color: '#5b21b6' },
-      COMPLETED: { background: '#dcfce7', color: '#166534' },
+      DONE: { background: '#dcfce7', color: '#166534' },
       CANCELLED: { background: '#fee2e2', color: '#dc2626' },
       NO_SHOW: { background: '#f3f4f6', color: '#6b7280' }
     };
@@ -124,12 +128,13 @@ export const useAppointmentCalendar = () => {
    */
   const getQuickStats = () => {
     const today = new Date().toDateString();
-    const todayAppointments = appointments.filter(a =>
-      new Date(a.start).toDateString() === today
-    ).length;
+    const todayAppointments = appointments.filter(a => {
+      if (!a.appointmentDateTime) return false;
+      return new Date(a.appointmentDateTime).toDateString() === today;
+    }).length;
 
     const completedAppointments = appointments.filter(a =>
-      a.status === 'COMPLETED'
+      a.status === 'DONE'
     ).length;
 
     const pendingAppointments = appointments.filter(a =>

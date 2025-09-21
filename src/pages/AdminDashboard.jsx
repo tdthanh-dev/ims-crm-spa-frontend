@@ -39,7 +39,7 @@ const AdminDashboard = () => {
       ] = await Promise.allSettled([
         customersApi.getCustomers({ page: 0, size: 1 }),
         servicesApi.getServices({ page: 0, size: 1 }),
-        appointmentsApi.getTodayAppointments(),
+        appointmentsApi.getAll({ size: 1000 }), // Get all appointments to filter by today
         invoicesApi.getInvoices({ page: 0, size: 1 }),
         leadsApi.getLeadStats()
       ]);
@@ -51,8 +51,24 @@ const AdminDashboard = () => {
       const serviceStats = servicesRes.status === 'fulfilled'
         ? servicesRes.value : { totalElements: 0 };
 
-      const appointmentData = appointmentsRes.status === 'fulfilled'
+      let appointmentData = appointmentsRes.status === 'fulfilled'
         ? appointmentsRes.value : [];
+
+      // Extract appointments content if it's wrapped in response structure
+      if (appointmentData?.content && Array.isArray(appointmentData.content)) {
+        appointmentData = appointmentData.content;
+      } else if (appointmentData?.data?.content && Array.isArray(appointmentData.data.content)) {
+        appointmentData = appointmentData.data.content;
+      } else if (!Array.isArray(appointmentData)) {
+        appointmentData = [];
+      }
+
+      // Filter appointments for today
+      const today = new Date().toDateString();
+      const todayAppointments = appointmentData.filter(apt => {
+        if (!apt.appointmentDateTime) return false;
+        return new Date(apt.appointmentDateTime).toDateString() === today;
+      }).length;
 
       const invoiceStats = invoicesRes.status === 'fulfilled'
         ? invoicesRes.value : { totalElements: 0 };
@@ -63,7 +79,7 @@ const AdminDashboard = () => {
       setStats({
         totalCustomers: customerStats.totalElements || 0,
         totalServices: serviceStats.totalElements || 0,
-        todayAppointments: appointmentData.length || 0,
+        todayAppointments: todayAppointments,
         totalInvoices: invoiceStats.totalElements || 0,
         totalRevenue: calculateTotalRevenue(invoiceStats.content || []),
         todayLeads: leadStats.todayCount || 0,
@@ -88,7 +104,7 @@ const AdminDashboard = () => {
         pendingInvoicesRes
       ] = await Promise.allSettled([
         customersApi.getCustomers({ page: 0, size: 5 }),
-        appointmentsApi.getAppointments({ page: 0, size: 5 }),
+        appointmentsApi.getAll({ page: 0, size: 5 }),
         invoicesApi.getInvoices({ page: 0, size: 5 })
       ]);
 

@@ -83,11 +83,17 @@ class AppointmentsService extends BaseService {
   /**
    * Update appointment status
    * @param {string|number} id - Appointment ID
-   * @param {string} status - New status
+   * @param {string|Object} status - New status or payload object
+   * @param {string} reason - Optional reason
+   * @param {string} notes - Optional notes
    * @returns {Promise} API response
    */
-  async updateAppointmentStatus(id, status) {
-    return this.updateStatus(id, status);
+  async updateAppointmentStatus(id, status, reason, notes) {
+    // If status is a string, convert to object format
+    const payload = typeof status === 'string'
+      ? { status, reason, notes }
+      : status;
+    return this.updateStatus(id, payload);
   }
 
   /**

@@ -40,7 +40,7 @@ export const useTreatmentProcess = () => {
       setLoading(true);
 
       // Get all appointments for this technician
-      const response = await appointmentsApi.getAppointments({
+      const response = await appointmentsApi.getAll({
         page: 0,
         size: 50,
         sortBy: 'apptId',

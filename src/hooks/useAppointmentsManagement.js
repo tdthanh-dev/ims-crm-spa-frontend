@@ -4,21 +4,17 @@ import { useSearchParams } from 'react-router-dom';
 import { servicesService, customersService, leadsService } from '@/services';
 import { useSort } from '@/hooks/useSort';
 import { appointmentsApi } from '@/services/appointmentsApi';
-import { convertArrayToDate } from '@/utils/dateUtils';
-
-function normalizeAppointment(item) {
-  if (!item) return item;
-  return {
-    ...item,
-    startAt: Array.isArray(item.startAt) ? convertArrayToDate(item.startAt) : item.startAt,
-    endAt: Array.isArray(item.endAt) ? convertArrayToDate(item.endAt) : item.endAt,
-    notes: item.note ?? item.notes ?? null,
-  };
-}
 
 export const useAppointmentsManagement = () => {
   const [searchParams] = useSearchParams();
-  const leadId = searchParams.get('leadId');
+  const urlLeadId = searchParams.get('leadId');
+  const sessionLeadId = sessionStorage.getItem('appointmentLeadId');
+  const sessionCustomerName = sessionStorage.getItem('appointmentCustomerName');
+  const sessionCustomerPhone = sessionStorage.getItem('appointmentCustomerPhone');
+  const sessionCustomerId = sessionStorage.getItem('appointmentCustomerId');
+
+  // Use URL leadId first, then session leadId
+  const leadId = urlLeadId || sessionLeadId;
 
   const [data, setData] = useState({
     appointments: [],
@@ -45,6 +41,16 @@ export const useAppointmentsManagement = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, pagination, leadId]);
 
+  // Cleanup sessionStorage when component unmounts
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('appointmentLeadId');
+      sessionStorage.removeItem('appointmentCustomerName');
+      sessionStorage.removeItem('appointmentCustomerPhone');
+      sessionStorage.removeItem('appointmentCustomerId');
+    };
+  }, []);
+
   const fetchData = async () => {
     try {
       setData((prev) => ({ ...prev, loading: true, error: null }));
@@ -59,10 +65,9 @@ export const useAppointmentsManagement = () => {
       // ✅ Chuẩn hóa response
       const payload = response?.data || response; // có thể là { success, message, data }
       const content = Array.isArray(payload?.content) ? payload.content : [];
-      const normalized = content.map(normalizeAppointment);
 
       setData({
-        appointments: normalized,
+        appointments: content,
         totalElements: payload?.totalElements ?? 0,
         totalPages: payload?.totalPages ?? 0,
         currentPage: payload?.currentPage ?? pagination.page,
@@ -101,15 +106,32 @@ export const useAppointmentsManagement = () => {
   const fetchLeadAndOpenModal = async (id) => {
     try {
       await leadsService.getById(id);
-      setModalState({ isOpen: true, context: { leadId: Number(id) } });
+      const context = {
+        leadId: Number(id),
+        customerName: sessionCustomerName,
+        customerPhone: sessionCustomerPhone,
+        customerId: sessionCustomerId && sessionCustomerId !== '' ? sessionCustomerId : null
+      };
+      setModalState({ isOpen: true, context });
+      // Clear sessionStorage after using the data
+      sessionStorage.removeItem('appointmentLeadId');
+      sessionStorage.removeItem('appointmentCustomerName');
+      sessionStorage.removeItem('appointmentCustomerPhone');
+      sessionStorage.removeItem('appointmentCustomerId');
     } catch (error) {
       console.error('Error fetching lead:', error);
+      // Clear sessionStorage even if there's an error
+      sessionStorage.removeItem('appointmentLeadId');
+      sessionStorage.removeItem('appointmentCustomerName');
+      sessionStorage.removeItem('appointmentCustomerPhone');
+      sessionStorage.removeItem('appointmentCustomerId');
     }
   };
 
   const handlePageChange = (newPage) => setPagination((prev) => ({ ...prev, page: newPage }));
   const handlePageSizeChange = (newSize) => setPagination({ page: 0, size: newSize });
   const handleCreateAppointment = () => setModalState({ isOpen: true, context: null });
+  const handleCreateAppointmentWithContext = (leadId) => setModalState({ isOpen: true, context: { leadId: Number(leadId) } });
   const handleCloseModal = () => setModalState({ isOpen: false, context: null });
   const handleAppointmentCreated = () => {
     fetchData();
@@ -149,6 +171,7 @@ export const useAppointmentsManagement = () => {
     handlePageChange,
     handlePageSizeChange,
     handleCreateAppointment,
+    handleCreateAppointmentWithContext,
     handleCloseModal,
     handleAppointmentCreated,
     getStatusBadge,

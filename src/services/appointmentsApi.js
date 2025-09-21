@@ -4,7 +4,7 @@ import { extractApiResponse } from '@/utils/apiUtils';
 import { API_ENDPOINTS } from '@/config/constants';
 
 export const appointmentsApi = {
-  // LIST (có phân trang)
+  // Lấy tất cả lịch hẹn với phân trang
   async getAll(params = {}) {
     const {
       page = 0,
@@ -19,70 +19,30 @@ export const appointmentsApi = {
     return extractApiResponse(res);
   },
 
-  // Lịch hẹn hôm nay
-  async getTodayAppointments(params = {}) {
+  // Lấy lịch hẹn theo ID
+  async getById(id) {
+    const res = await apiClient.get(`${API_ENDPOINTS.APPOINTMENTS}/${id}`);
+    return extractApiResponse(res);
+  },
+
+  // Lấy lịch hẹn theo customer ID với phân trang
+  async getByCustomer(customerId, params = {}) {
     const {
       page = 0,
       size = 20,
-      sortBy = 'startAt',
-      sortDir = 'asc',
+      sortBy = 'appointmentDateTime',
+      sortDir = 'desc',
     } = params;
 
-    const res = await apiClient.get(`${API_ENDPOINTS.APPOINTMENTS}/today`, {
+    const res = await apiClient.get(`${API_ENDPOINTS.APPOINTMENTS}/customer/${customerId}`, {
       params: { page, size, sortBy, sortDir },
     });
     return extractApiResponse(res);
   },
 
-  // Lấy theo khách hàng
-  async getByCustomer(customerId, params = {}) {
-    const {
-      page = 0,
-      size = 20,
-      sortBy = 'startAt',
-      sortDir = 'desc',
-    } = params;
-
-    const res = await apiClient.get(
-      `${API_ENDPOINTS.APPOINTMENTS}/customer/${customerId}`,
-      { params: { page, size, sortBy, sortDir } },
-    );
-    return extractApiResponse(res);
-  },
-
-  // Lấy theo kỹ thuật viên
-  async getByTechnician(technicianId, params = {}) {
-    const {
-      page = 0,
-      size = 20,
-      sortBy = 'startAt',
-      sortDir = 'desc',
-    } = params;
-
-    const res = await apiClient.get(
-      `${API_ENDPOINTS.APPOINTMENTS}/technician/${technicianId}`,
-      { params: { page, size, sortBy, sortDir } },
-    );
-    return extractApiResponse(res);
-  },
-
-  // Lấy theo khoảng ngày (ISO yyyy-MM-dd)
-  async getByDateRange(startDate, endDate, params = {}) {
-    const {
-      page = 0,
-      size = 20,
-    } = params;
-
-    const res = await apiClient.get(
-      `${API_ENDPOINTS.APPOINTMENTS}/range`,
-      { params: { startDate, endDate, page, size } },
-    );
-    return extractApiResponse(res);
-  },
-
-  // Tạo lịch hẹn (hỗ trợ tạo bằng leadId hoặc customerId)
+  // Tạo lịch hẹn mới
   async createAppointment(payload) {
-    // payload: { leadId? | customerId?, serviceId, technicianId?, receptionistId, startAt, endAt, status?, notes? }
+    // payload: { leadId?, customerId?, customerName?, customerPhone?, appointmentDateTime, status?, notes? }
     const res = await apiClient.post(API_ENDPOINTS.APPOINTMENTS, payload);
     return extractApiResponse(res);
   },
@@ -94,12 +54,13 @@ export const appointmentsApi = {
   },
 
   // Cập nhật trạng thái
-  async updateStatus(id, status) {
-    const res = await apiClient.put(`${API_ENDPOINTS.APPOINTMENTS}/${id}/status`, { status });
+  async updateStatus(id, payload) {
+    // payload: { status, reason?, notes? }
+    const res = await apiClient.put(`${API_ENDPOINTS.APPOINTMENTS}/${id}/status`, payload);
     return extractApiResponse(res);
   },
 
-  // Xóa
+  // Xóa lịch hẹn
   async deleteAppointment(id) {
     const res = await apiClient.delete(`${API_ENDPOINTS.APPOINTMENTS}/${id}`);
     return extractApiResponse(res);

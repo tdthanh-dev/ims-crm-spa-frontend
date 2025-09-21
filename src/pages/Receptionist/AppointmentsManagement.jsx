@@ -17,16 +17,28 @@ const AppointmentsManagement = () => {
   // State quản lý modal chi tiết
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
-  const statusTw = (cls) => {
-    const map = {
-      'status-scheduled': 'bg-blue-50 text-blue-700',
-      'status-confirmed': 'bg-green-50 text-green-700',
-      'status-no-show' : 'bg-gray-100 text-gray-600',
-      'status-done'    : 'bg-emerald-50 text-emerald-700',
-      'status-cancelled':'bg-rose-50 text-rose-700',
-      'status-default' : 'bg-slate-100 text-slate-700'
+  // Status mapping from English to Vietnamese (fallback)
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      'SCHEDULED': 'Đã lên lịch',
+      'CONFIRMED': 'Đã xác nhận',
+      'NO_SHOW': 'Không đến',
+      'DONE': 'Hoàn thành',
+      'CANCELLED': 'Đã hủy'
     };
-    return map[cls] || map['status-default'];
+    return statusMap[status] || status;
+  };
+
+  const statusTw = (status) => {
+    const map = {
+      'Đã lên lịch': 'bg-blue-50 text-blue-700',
+      'Đã xác nhận': 'bg-green-50 text-green-700',
+      'Không đến': 'bg-gray-100 text-gray-600',
+      'Hoàn thành': 'bg-emerald-50 text-emerald-700',
+      'Đã hủy': 'bg-rose-50 text-rose-700',
+      'status-default': 'bg-slate-100 text-slate-700'
+    };
+    return map[status] || map['status-default'];
   };
 
   if (data.loading) {
@@ -101,9 +113,8 @@ const AppointmentsManagement = () => {
               <tr>
                 <th className="px-4 py-3 font-semibold text-gray-700">STT</th>
                 <SortableHeader label="Khách hàng" sortKey="customerName" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
-                <SortableHeader label="Dịch vụ" sortKey="serviceName" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
-                <SortableHeader label="Bắt đầu" sortKey="startAt" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
-                <SortableHeader label="Kết thúc" sortKey="endAt" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
+                <SortableHeader label="Số điện thoại" sortKey="customerPhone" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
+                <SortableHeader label="Thời gian hẹn" sortKey="appointmentDateTime" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
                 <SortableHeader label="Trạng thái" sortKey="status" currentSort={sort} onSort={handleSort} className="px-4 py-3 font-semibold text-gray-700" />
                 <th className="px-4 py-3 font-semibold text-gray-700">Ghi chú</th>
                 <th className="px-4 py-3 font-semibold text-gray-700">Thao tác</th>
@@ -112,28 +123,27 @@ const AppointmentsManagement = () => {
             <tbody>
               {hasAppointments ? (
                 data.appointments.map((apt, index) => {
-                  const statusInfo = getStatusBadge(apt.status);
                   return (
                     <tr key={apt.apptId ?? index} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3">{pagination.page * pagination.size + index + 1}</td>
                       <td className="px-4 py-3 font-medium text-gray-900">{apt.customerName || 'N/A'}</td>
-                      <td className="px-4 py-3">{apt.serviceName || 'N/A'}</td>
+                      <td className="px-4 py-3">{apt.customerPhone || 'N/A'}</td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                          {formatDateTimeVN(apt.startAt)}
-                        </span>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {apt.displayDate || formatDateTimeVN(apt.appointmentDateTime).split(' ')[0] || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {apt.displayTime || formatDateTimeVN(apt.appointmentDateTime).split(' ')[1] || ''}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                          {formatDateTimeVN(apt.endAt)}
+                        <span className={['inline-flex rounded-full px-2 py-1 text-xs font-medium', statusTw(apt.displayStatus || getStatusLabel(apt.status))].join(' ')}>
+                          {apt.displayStatus || getStatusLabel(apt.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={['inline-flex rounded-full px-2 py-1 text-xs font-medium', statusTw(statusInfo.className)].join(' ')}>
-                          {statusInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">{apt.note || apt.notes || 'N/A'}</td>
+                      <td className="px-4 py-3 text-gray-700">{apt.note || 'N/A'}</td>
                       <td className="px-4 py-3">
                         <button
                           className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
@@ -146,7 +156,7 @@ const AppointmentsManagement = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan={8} className="px-4 py-10"><Empty /></td></tr>
+                <tr><td colSpan={7} className="px-4 py-10"><Empty /></td></tr>
               )}
             </tbody>
           </table>

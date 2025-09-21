@@ -1,5 +1,5 @@
 // filepath: src/pages/customers/CustomerProfile/CustomerProfilePage.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import useCustomerProfile, { formatCurrency, formatDateTimeVN, getStatusBadge } from "@/hooks/useCustomerProfile";
 import photosApi from "@/services/photosApi";
 
@@ -15,6 +15,8 @@ import PhotosPanel from "./panels/PhotosPanel";
 import CustomerCaseCreationModal from "@/components/Customer/CustomerCaseCreationModal";
 import InvoiceCreationModal from "@/components/Billing/InvoiceCreationModal";
 import UploadPhotosModal from "./modals/UploadPhotosModal";
+import CreateAppointmentModal from "@/components/Appointment/CreateAppointmentModal";
+import AppointmentDetailModal from "@/components/Appointment/AppointmentDetailModal";
 
 export default function CustomerProfilePage({ userRole, customerId: customerIdProp }) {
   const {
@@ -45,8 +47,15 @@ export default function CustomerProfilePage({ userRole, customerId: customerIdPr
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploadNote, setUploadNote] = useState('');
+  const [uploadType, setUploadType] = useState('BEFORE');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  // ✅ State quản lý appointment creation modal
+  const [showAppointmentCreationModal, setShowAppointmentCreationModal] = useState(false);
+
+  // ✅ State quản lý appointment detail modal
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const normalizedTreatments = useMemo(
     () =>
@@ -94,6 +103,134 @@ export default function CustomerProfilePage({ userRole, customerId: customerIdPr
     setSelectedCaseForPhotos(null);
   };
 
+  // ✅ Handlers cho appointment creation modal
+  const handleOpenAppointmentCreationModal = () => {
+    setShowAppointmentCreationModal(true);
+  };
+
+  const handleCloseAppointmentCreationModal = () => {
+    setShowAppointmentCreationModal(false);
+  };
+
+  const handleAppointmentCreated = () => {
+    setShowAppointmentCreationModal(false);
+    // Refresh appointment data
+    if (loadCustomerData) {
+      loadCustomerData(customerId);
+    }
+  };
+
+  // ✅ Handlers cho appointment detail modal
+  const handleViewAppointmentDetail = (appointment) => {
+    setSelectedAppointment(appointment);
+  };
+
+  const handleCloseAppointmentDetail = () => {
+    setSelectedAppointment(null);
+  };
+
+  const handleAppointmentUpdated = () => {
+    setSelectedAppointment(null);
+    // Refresh appointment data
+    if (loadCustomerData) {
+      loadCustomerData(customerId);
+    }
+  };
+
+  // ✅ Handlers cho upload photos modal
+  const handleOpenUploadModal = useCallback(() => {
+    setShowUploadModal(true);
+    setUploadFiles([]);
+    setUploadNote('');
+    setUploadType('BEFORE');
+    setUploadError('');
+  }, []);
+
+  const handleCloseUploadModal = useCallback(() => {
+    setShowUploadModal(false);
+    setUploadFiles([]);
+    setUploadNote('');
+    setUploadType('BEFORE');
+    setUploadError('');
+    setUploading(false);
+  }, []);
+
+  const handleSelectFiles = useCallback((event) => {
+    const files = Array.from(event.target.files);
+    setUploadError('');
+
+    // Validation
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+    const validFiles = [];
+    const errors = [];
+
+    files.forEach(file => {
+      if (file.size > maxSize) {
+        errors.push(`${file.name} quá lớn (tối đa 10MB)`);
+      } else if (!allowedTypes.includes(file.type)) {
+        errors.push(`${file.name} không phải định dạng ảnh hợp lệ`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    setUploadFiles(validFiles);
+
+    if (errors.length > 0) {
+      setUploadError(errors.join('. '));
+    }
+  }, []);
+
+  const handleChangeUploadNote = useCallback((note) => {
+    setUploadNote(note);
+  }, []);
+
+  const handleRemoveFile = useCallback((indexToRemove) => {
+    setUploadFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  }, []);
+
+  const handleChangeUploadType = useCallback((type) => {
+    setUploadType(type);
+  }, []);
+
+  const handleSubmitUpload = useCallback(async () => {
+    if (!uploadFiles.length || !selectedCaseForPhotos) return;
+
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      // Gọi API upload
+      const uploadedPhotos = await photosApi.uploadPhotos(
+        selectedCaseForPhotos.caseId || selectedCaseForPhotos.id,
+        uploadFiles,
+        uploadNote,
+        uploadType // Sử dụng type đã chọn
+      );
+
+      // Đóng modal và refresh dữ liệu
+      handleCloseUploadModal();
+
+      // Refresh customer data để cập nhật photos
+      if (loadCustomerData) {
+        loadCustomerData(customerId);
+      }
+
+      console.log('Upload thành công:', uploadedPhotos);
+    } catch (error) {
+      console.error('Upload thất bại:', error);
+      setUploadError(
+        error.response?.data?.message ||
+        error.message ||
+        'Có lỗi xảy ra khi upload ảnh. Vui lòng thử lại.'
+      );
+    } finally {
+      setUploading(false);
+    }
+  }, [uploadFiles, selectedCaseForPhotos, uploadNote, uploadType, handleCloseUploadModal, loadCustomerData, customerId]);
+
   if (loading) return <div className="p-6 text-gray-500">Đang tải...</div>;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!customer) return <div className="p-6 text-gray-600">Không tìm thấy khách hàng</div>;
@@ -126,10 +263,13 @@ export default function CustomerProfilePage({ userRole, customerId: customerIdPr
               startDate: selectedCaseForPhotos.startDate,
               endDate: selectedCaseForPhotos.endDate,
               intakeNote: selectedCaseForPhotos.intakeNote,
+              notes: selectedCaseForPhotos.notes, // ✅ Thêm trường notes
+              totalAmount: selectedCaseForPhotos.totalAmount, // ✅ Thêm thông tin tài chính
+              paidStatus: selectedCaseForPhotos.paidStatus, // ✅ Thêm trạng thái thanh toán
             }}
             // ✅ Bỏ photos={[]} để component tự gọi API
             onBack={handleBackToTreatments}
-            onOpenUpload={() => console.log("Upload modal")}
+            onOpenUpload={handleOpenUploadModal}
             onDeletePhoto={(id) => console.log("Xóa ảnh", id)}
             formatDateTimeVN={formatDateTimeVN}
           />
@@ -165,6 +305,8 @@ export default function CustomerProfilePage({ userRole, customerId: customerIdPr
                 appointments={tabData.appointments || []}
                 formatDateTimeVN={formatDateTimeVN}
                 getStatusBadge={getStatusBadge}
+                onCreate={handleOpenAppointmentCreationModal}
+                onViewDetail={handleViewAppointmentDetail}
               />
             )}
 
@@ -214,6 +356,44 @@ export default function CustomerProfilePage({ userRole, customerId: customerIdPr
           selectedCase={selectedCaseForInvoice}
         />
       )}
+
+      {/* Modal tạo lịch hẹn */}
+      {showAppointmentCreationModal && (
+        <CreateAppointmentModal
+          isOpen={showAppointmentCreationModal}
+          onClose={handleCloseAppointmentCreationModal}
+          onAppointmentCreated={handleAppointmentCreated}
+          context={{
+            customerId: customerId,
+            customerName: customer?.fullName || "",
+            customerPhone: customer?.phone || ""
+          }}
+        />
+      )}
+
+      {/* Modal chi tiết lịch hẹn */}
+      <AppointmentDetailModal
+        isOpen={!!selectedAppointment}
+        onClose={handleCloseAppointmentDetail}
+        appointment={selectedAppointment}
+        onUpdated={handleAppointmentUpdated}
+      />
+
+      {/* Modal upload ảnh */}
+      <UploadPhotosModal
+        isOpen={showUploadModal}
+        files={uploadFiles}
+        note={uploadNote}
+        uploadType={uploadType}
+        uploading={uploading}
+        error={uploadError}
+        onClose={handleCloseUploadModal}
+        onSelectFiles={handleSelectFiles}
+        onSubmit={handleSubmitUpload}
+        onChangeNote={handleChangeUploadNote}
+        onRemoveFile={handleRemoveFile}
+        onChangeUploadType={handleChangeUploadType}
+      />
     </div>
   );
 }

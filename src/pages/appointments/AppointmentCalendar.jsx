@@ -77,17 +77,17 @@ const AppointmentCalendar = ({ userRole }) => {
               Lịch hẹn ({appointments.length})
             </h3>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <LegendPill text="Đã đặt" emoji="📅" />
-              <LegendPill text="Xác nhận" emoji="✅" />
-              <LegendPill text="Đang thực hiện" emoji="🔄" />
+              <LegendPill text="Đã lên lịch" emoji="📅" />
+              <LegendPill text="Đã xác nhận" emoji="✅" />
               <LegendPill text="Hoàn thành" emoji="✔️" />
+              <LegendPill text="Đã hủy" emoji="❌" />
             </div>
           </div>
 
           {hasAppointments ? (
             <div className="grid grid-cols-1 gap-3">
               {appointments.map((appointment) => {
-                const key = appointment.appointmentId || appointment.id || `${appointment.start}-${appointment.customerName || ''}`;
+                const key = appointment.apptId || `${appointment.appointmentDateTime}-${appointment.customerName || ''}`;
                 const statusStyle = getStatusStyle(appointment.status);
 
                 return (
@@ -98,26 +98,30 @@ const AppointmentCalendar = ({ userRole }) => {
                     {/* Time block */}
                     <div className="sm:w-64">
                       <div className="text-sm text-gray-500">
-                        {formatTimeRange(appointment.start, appointment.end)}
+                        {new Date(appointment.appointmentDateTime).toLocaleTimeString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {new Date(appointment.start).toLocaleDateString('vi-VN')}
+                        {new Date(appointment.appointmentDateTime).toLocaleDateString('vi-VN')}
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 truncate">
-                        {appointment.title || appointment.serviceName || 'Lịch hẹn'}
+                        Lịch hẹn với {appointment.customerName || 'Khách hàng'}
                       </div>
-                      <div className="mt-1 text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
-                        <span>👤 {appointment.customerName || 'Khách'}</span>
-                        <span>💼 {appointment.serviceName || 'Dịch vụ'}</span>
-                        <span>🎨 {appointment.technicianName || 'Chưa phân công'}</span>
+                      <div className="mt-1 text-sm text-gray-600">
+                        <span>👤 {appointment.customerName || 'Khách hàng'}</span>
+                        {appointment.customerPhone && (
+                          <span className="ml-4">📞 {appointment.customerPhone}</span>
+                        )}
                       </div>
-                      {appointment.description && (
+                      {appointment.note && (
                         <div className="mt-1 text-sm text-gray-500 line-clamp-2">
-                          {appointment.description}
+                          {appointment.note}
                         </div>
                       )}
                     </div>
@@ -134,11 +138,6 @@ const AppointmentCalendar = ({ userRole }) => {
                         <button className="px-2 py-1 text-sm rounded bg-gray-800 text-white hover:bg-gray-900">
                           👁️
                         </button>
-                        {appointment.editable && (
-                          <button className="px-2 py-1 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">
-                            ✏️
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -218,12 +217,10 @@ const LegendPill = ({ emoji, text }) => (
 
 const statusLabel = (s) => {
   switch (s) {
-    case 'SCHEDULED': return 'Đã đặt';
-    case 'CONFIRMED': return 'Xác nhận';
-    case 'CHECKED_IN': return 'Đã đến';
-    case 'IN_PROGRESS': return 'Đang thực hiện';
-    case 'COMPLETED': return 'Hoàn thành';
-    case 'CANCELLED': return 'Hủy';
+    case 'SCHEDULED': return 'Đã lên lịch';
+    case 'CONFIRMED': return 'Đã xác nhận';
+    case 'DONE': return 'Hoàn thành';
+    case 'CANCELLED': return 'Đã hủy';
     case 'NO_SHOW': return 'Không đến';
     default: return s || 'Trạng thái';
   }

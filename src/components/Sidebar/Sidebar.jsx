@@ -18,7 +18,7 @@ const Sidebar = ({ menuItems = [], onLogout }) => {
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-3 border-b border-primary-100 flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white grid place-items-center shadow">
-            <span className="font-bold">S</span>
+            <i className="fas fa-spa text-lg"></i>
           </div>
           <span className="text-black-900 font-semibold">SPA Admin</span>
         </div>
@@ -32,14 +32,15 @@ const Sidebar = ({ menuItems = [], onLogout }) => {
                 key={item.id}
                 onClick={() => handleMenuClick(item)}
                 className={
-                  `group w-full flex items-center rounded-xl px-3 py-2 mb-1 transition ` +
+                  `group w-full flex items-center rounded-xl px-3 py-2 mb-1 transition-all duration-200 ` +
                   (active
-                    ? 'bg-primary-100 text-primary-800 border border-primary-200 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]'
-                    : 'text-black-800 hover:bg-primary-50 border border-transparent')
+                    ? 'bg-primary-100 text-primary-800 border border-primary-200 shadow-sm transform scale-[1.02]'
+                    : 'text-black-800 hover:bg-primary-50 border border-transparent hover:border-primary-100')
                 }
               >
-                <i className={`text-lg mr-3 ${item.iconClass || 'fas fa-circle'} ${active ? 'text-primary-700' : 'text-black-600'}`}></i>
+                <i className={`text-lg mr-3 transition-all duration-200 ${item.iconClass || 'fas fa-circle'} ${active ? 'text-primary-700' : 'text-black-600 group-hover:text-primary-600'}`}></i>
                 <span className="truncate text-sm font-medium">{item.label}</span>
+                {active && <i className="fas fa-chevron-right ml-auto text-xs text-primary-600"></i>}
               </button>
             );
           })}

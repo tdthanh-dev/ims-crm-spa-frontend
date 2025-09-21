@@ -32,55 +32,43 @@ export const useTechnicianDashboard = (user) => {
     try {
       setData(prev => ({ ...prev, loading: true, error: null }));
 
-      // Get today's appointments and all appointments
-      const todayAppointmentsRes = await appointmentsApi.getTodayAppointments();
-      const myAppointmentsRes = await appointmentsApi.getAppointments();
+      // Get all appointments to filter by technician and date
+      const allAppointmentsRes = await appointmentsApi.getAll();
 
-      console.log('🔍 Technician - Today Appointments Response:', todayAppointmentsRes);
-      console.log('🔍 Technician - My Appointments Response:', myAppointmentsRes);
+      console.log('🔍 Technician - All Appointments Response:', allAppointmentsRes);
 
       // Handle response format properly - appointmentsApi may return different formats
-      let allTodayAppointments = [];
-      let allMyAppointments = [];
+      let allAppointments = [];
 
-      // Handle today appointments response
-      if (todayAppointmentsRes) {
-        if (Array.isArray(todayAppointmentsRes)) {
-          allTodayAppointments = todayAppointmentsRes;
-        } else if (todayAppointmentsRes.content) {
-          allTodayAppointments = todayAppointmentsRes.content;
-        } else if (todayAppointmentsRes.data?.success) {
-          allTodayAppointments = todayAppointmentsRes.data.data || [];
+      // Handle appointments response
+      if (allAppointmentsRes) {
+        if (Array.isArray(allAppointmentsRes)) {
+          allAppointments = allAppointmentsRes;
+        } else if (allAppointmentsRes.content) {
+          allAppointments = allAppointmentsRes.content;
+        } else if (allAppointmentsRes.data?.success) {
+          allAppointments = allAppointmentsRes.data.data || [];
         } else {
-          allTodayAppointments = todayAppointmentsRes.data || [];
+          allAppointments = allAppointmentsRes.data || [];
         }
       }
 
-      // Handle my appointments response
-      if (myAppointmentsRes) {
-        if (Array.isArray(myAppointmentsRes)) {
-          allMyAppointments = myAppointmentsRes;
-        } else if (myAppointmentsRes.content) {
-          allMyAppointments = myAppointmentsRes.content;
-        } else if (myAppointmentsRes.data?.success) {
-          allMyAppointments = myAppointmentsRes.data.data?.content || myAppointmentsRes.data.data || [];
-        } else {
-          allMyAppointments = myAppointmentsRes.data || [];
-        }
-      }
+      // Filter appointments by technician and date
+      const today = new Date().toDateString();
+      const todayAppointments = allAppointments.filter(apt => {
+        if (!apt.appointmentDateTime) return false;
+        return new Date(apt.appointmentDateTime).toDateString() === today;
+      });
+      const myAppointments = allAppointments.filter(apt => apt.technicianId === technicianId);
 
-      console.log(`📊 Processed appointments - Today: ${allTodayAppointments.length}, All: ${allMyAppointments.length}`);
-
-      // Filter appointments for this technician
-      const myTodayAppointments = allTodayAppointments.filter(apt => apt.technicianId === technicianId);
-      const myAllAppointments = allMyAppointments.filter(apt => apt.technicianId === technicianId);
+      console.log(`📊 Processed appointments - Today: ${todayAppointments.length}, My: ${myAppointments.length}`);
 
       // Find current treatment (IN_PROGRESS status)
-      const currentTreatment = myTodayAppointments.find(apt => apt.status === 'IN_PROGRESS');
+      const currentTreatment = todayAppointments.find(apt => apt.technicianId === technicianId && apt.status === 'IN_PROGRESS');
 
       setData({
-        todayAppointments: myTodayAppointments,
-        myAppointments: myAllAppointments.slice(0, 10), // Recent 10
+        todayAppointments: todayAppointments,
+        myAppointments: myAppointments.slice(0, 10), // Recent 10
         currentTreatment: currentTreatment || null,
         loading: false,
         error: null

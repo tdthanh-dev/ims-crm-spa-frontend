@@ -105,7 +105,7 @@ export const INVOICE_STATUS_MAP = {
 
 // Appointment Status mappings
 export const APPOINTMENT_STATUS_MAP = {
-  SCHEDULED: { label: 'Đã đặt', className: 'status-scheduled' },
+  SCHEDULED: { label: 'Đã lên lịch', className: 'status-scheduled' },
   CONFIRMED: { label: 'Đã xác nhận', className: 'status-confirmed' },
   NO_SHOW: { label: 'Không đến', className: 'status-no-show' },
   DONE: { label: 'Hoàn thành', className: 'status-done' },

@@ -121,16 +121,15 @@ export default function PhotosPanel({
           )}
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              Ảnh hồ sơ #{caseInfo?.caseId}{' '}
+              Ảnh hồ sơ điều trị #{caseInfo?.caseId}{' '}
               {caseInfo?.serviceName && (
                 <span className="font-normal text-gray-700">— {caseInfo.serviceName}</span>
               )}
             </h2>
-            {caseInfo?.status && (
-              <div className="mt-1 inline-flex items-center gap-2">
-                <StatusPill status={caseInfo.status} />
-              </div>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {caseInfo?.status && <StatusPill status={caseInfo.status} />}
+              {caseInfo?.paidStatus && <PaidStatusPill status={caseInfo.paidStatus} />}
+            </div>
           </div>
         </div>
 
@@ -145,15 +144,40 @@ export default function PhotosPanel({
 
       {/* Info hồ sơ */}
       {caseInfo && (
-        <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-3">
-          <Info label="Bắt đầu">{caseInfo.startDate ? formatDateTimeVN(caseInfo.startDate) : '—'}</Info>
-          <Info label="Kết thúc">{caseInfo.endDate ? formatDateTimeVN(caseInfo.endDate) : '—'}</Info>
-          <Info label="Trạng thái"><StatusPill status={caseInfo.status} /></Info>
-          <div className="sm:col-span-3">
-            <Info label="Ghi chú">
-              <span className="text-gray-800">{caseInfo.intakeNote || caseInfo.notes || 'Không có'}</span>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Info label="📅 Bắt đầu">{caseInfo.startDate ? formatDateTimeVN(caseInfo.startDate) : '—'}</Info>
+            <Info label="🏁 Kết thúc">{caseInfo.endDate ? formatDateTimeVN(caseInfo.endDate) : '—'}</Info>
+            <Info label="📋 Trạng thái"><StatusPill status={caseInfo.status} /></Info>
+            <Info label="💰 Thanh toán">
+              <PaidStatusPill status={caseInfo.paidStatus} />
             </Info>
           </div>
+
+          {/* Tổng tiền - chỉ hiển thị nếu có */}
+          {caseInfo.totalAmount && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <Info label="💵 Tổng tiền điều trị">
+                <span className="text-lg font-bold text-green-600">
+                  {typeof caseInfo.totalAmount === 'number'
+                    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(caseInfo.totalAmount)
+                    : caseInfo.totalAmount
+                  }
+                </span>
+              </Info>
+            </div>
+          )}
+
+          {/* Ghi chú - chỉ hiển thị nếu có */}
+          {(caseInfo.intakeNote || caseInfo.notes) && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <Info label="📝 Ghi chú điều trị">
+                <span className="text-gray-800 bg-gray-50 rounded-lg p-3 block leading-relaxed">
+                  {caseInfo.intakeNote || caseInfo.notes}
+                </span>
+              </Info>
+            </div>
+          )}
         </div>
       )}
 
@@ -206,6 +230,27 @@ function StatusPill({ status }) {
       COMPLETED: 'Hoàn thành',
       ON_HOLD: 'Tạm dừng',
       CANCELLED: 'Hủy bỏ',
+    }[status] || status || '—';
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function PaidStatusPill({ status }) {
+  const map = {
+    'UNPAID':         'bg-red-100 text-red-800',
+    'PARTIALLY_PAID': 'bg-yellow-100 text-yellow-800',
+    'FULLY_PAID':     'bg-green-100 text-green-800',
+  };
+  const cls = map[status] || 'bg-gray-100 text-gray-800';
+  const label =
+    {
+      'UNPAID': 'Chưa thanh toán',
+      'PARTIALLY_PAID': 'Thanh toán một phần',
+      'FULLY_PAID': 'Đã thanh toán',
     }[status] || status || '—';
 
   return (
