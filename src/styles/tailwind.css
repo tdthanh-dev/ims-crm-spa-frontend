@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles với tone hồng phấn */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-primary-50 text-black-900 font-medium;
+  }
+  
+  /* Smooth transitions cho tất cả elements */
+  * {
+    @apply transition-colors duration-200;
+  }
+}
+
+/* Component styles với theme hồng phấn */
+@layer components {
+  
+  /* Auth Form Styles */
+  .auth-container {
+    @apply min-h-screen bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 
+           flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8;
+  }
+  
+  .auth-card {
+    @apply max-w-md w-full bg-white rounded-2xl shadow-2xl border border-primary-200 
+           backdrop-blur-sm p-8 space-y-6;
+  }
+  
+  .auth-header {
+    @apply text-center space-y-2;
+  }
+  
+  .auth-title {
+    @apply text-3xl font-bold text-black-900 tracking-tight;
+  }
+  
+  .auth-subtitle {
+    @apply text-black-600 text-sm;
+  }
+  
+  .auth-logo {
+    @apply mx-auto h-16 w-16 bg-gradient-to-br from-primary-500 to-primary-600 
+           rounded-2xl flex items-center justify-center shadow-lg;
+  }
+  
+  /* Form Styles */
+  .form-group {
+    @apply space-y-2;
+  }
+  
+  .form-label {
+    @apply block text-sm font-semibold text-black-800;
+  }
+  
+  .form-input {
+    @apply w-full px-4 py-3 border-2 border-primary-200 rounded-xl 
+           bg-white text-black-900 placeholder-black-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           hover:border-primary-300 transition-all duration-200;
+  }
+  
+  .form-error {
+    @apply text-error-600 text-sm font-medium;
+  }
+  
+  /* Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent 
+           rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 
+           focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 
+           disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white 
+           hover:from-primary-600 hover:to-primary-700 focus:ring-primary-500
+           shadow-lg hover:shadow-xl transform hover:scale-105;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary-600 border-2 border-primary-300
+           hover:bg-primary-50 hover:border-primary-400 focus:ring-primary-500;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary-300 text-primary-700 bg-transparent
+           hover:bg-primary-50 hover:border-primary-400 focus:ring-primary-500;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-success-500 to-success-600 text-white 
+           hover:from-success-600 hover:to-success-700 focus:ring-success-500;
+  }
+  
+  .btn-error {
+    @apply bg-gradient-to-r from-error-500 to-error-600 text-white 
+           hover:from-error-600 hover:to-error-700 focus:ring-error-500;
+  }
+  
+  /* Card Styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden;
+  }
+  
+  .card-header {
+    @apply px-6 py-4 bg-gradient-to-r from-primary-50 to-primary-100 
+           border-b border-primary-200;
+  }
+  
+  .card-title {
+    @apply text-lg font-bold text-black-900;
+  }
+  
+  .card-body {
+    @apply px-6 py-4;
+  }
+  
+  .card-footer {
+    @apply px-6 py-4 bg-primary-25 border-t border-primary-200;
+  }
+  
+  /* Status Badges */
+  .status-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  
+  .status-success {
+    @apply bg-success-100 text-success-800 border border-success-200;
+  }
+  
+  .status-warning {
+    @apply bg-warning-100 text-warning-800 border border-warning-200;
+  }
+  
+  .status-error {
+    @apply bg-error-100 text-error-800 border border-error-200;
+  }
+  
+  .status-info {
+    @apply bg-primary-100 text-primary-800 border border-primary-200;
+  }
+  
+  /* Navigation & Layout */
+  .navbar {
+    @apply bg-white/90 backdrop-blur-md shadow-sm border-b border-primary-200;
+  }
+  
+  .sidebar {
+    @apply bg-white border-r border-primary-200 shadow-lg;
+  }
+  
+  /* Loading states */
+  .loading-spinner {
+    @apply animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600;
+  }
+  
+  .loading-overlay {
+    @apply fixed inset-0 bg-black-600/50 backdrop-blur-sm 
+           flex items-center justify-center z-50;
+  }
+}
